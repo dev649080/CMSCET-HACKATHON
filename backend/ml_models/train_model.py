@@ -24,12 +24,12 @@ def load_and_prepare_data():
     dataset_path = os.path.join(current_dir, 'Alloys.csv')
 
     if not os.path.exists(dataset_path):
-        print(f"✗ Dataset not found at {dataset_path}")
+        print(f"Dataset not found at {dataset_path}")
         return None, None, None, None
 
-    print("📊 Loading Alloys dataset...")
+    print("Loading Alloys dataset...")
     df = pd.read_csv(dataset_path)
-    print(f"   ✓ Loaded {len(df)} alloy records with {len(df.columns)} features")
+    print(f"Loaded {len(df)} alloy records with {len(df.columns)} features")
 
     # Define working elements
     elements = ['C', 'Si', 'Mn', 'Cr', 'Ni', 'Mo', 'Fe']
@@ -55,7 +55,7 @@ def load_and_prepare_data():
 
     np.random.seed(42)  # Consistent seed for reproducibility
 
-    print("\n🔄 Generating training scenarios from {} alloys...".format(len(df)))
+    print("\nGenerating training scenarios from {} alloys...".format(len(df)))
 
     # Generate multiple scenarios per alloy for better data richness
     scenarios_per_alloy = 3
@@ -200,26 +200,26 @@ def train_models():
         return False
 
     # Split data
-    print("\n📂 Splitting data (80% train, 20% test)...")
+    print("\nSplitting data (80% train, 20% test)...")
     X_train, X_test, y_mat_train, y_mat_test, y_qty_train, y_qty_test, y_qual_train, y_qual_test = train_test_split(
         X, y_material, y_quantity, y_quality, test_size=0.2, random_state=42
     )
-    print(f"   ✓ Train samples: {len(X_train)}")
-    print(f"   ✓ Test samples: {len(X_test)}")
+    print(f"Train samples: {len(X_train)}")
+    print(f"Test samples: {len(X_test)}")
 
     # Scale features
-    print("\n⚙️ Scaling features...")
+    print("\nScaling features...")
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-    print("   ✓ StandardScaler fitted and applied")
+    print("StandardScaler fitted and applied")
 
     # ============ MODEL 1: MATERIAL CLASSIFIER ============
     print("\n" + "-"*80)
     print("MODEL 1: RANDOM FOREST CLASSIFIER (Material Selection)")
     print("-"*80)
 
-    print("🤖 Training Random Forest Classifier with optimized hyperparameters...")
+    print("Training Random Forest Classifier with optimized hyperparameters...")
     classifier = RandomForestClassifier(
         n_estimators=200,  # Increased for better ensemble
         max_depth=20,  # Deeper trees for complex patterns
@@ -239,18 +239,18 @@ def train_models():
     classifier_recall = recall_score(y_mat_test, y_pred_material, average='weighted', zero_division=0)
     classifier_f1 = f1_score(y_mat_test, y_pred_material, average='weighted', zero_division=0)
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • Accuracy:  {classifier_accuracy*100:.2f}%")
-    print(f"  • Precision: {classifier_precision*100:.2f}%")
-    print(f"  • Recall:    {classifier_recall*100:.2f}%")
-    print(f"  • F1-Score:  {classifier_f1*100:.2f}%")
+    print(f"\nModel trained successfully")
+    print(f"Accuracy:  {classifier_accuracy*100:.2f}%")
+    print(f"Precision: {classifier_precision*100:.2f}%")
+    print(f"Recall:    {classifier_recall*100:.2f}%")
+    print(f"F1-Score:  {classifier_f1*100:.2f}%")
 
     # ============ MODEL 2: QUANTITY REGRESSOR ============
     print("\n" + "-"*80)
     print("MODEL 2: GRADIENT BOOSTING REGRESSOR (Quantity Prediction)")
     print("-"*80)
 
-    print("🤖 Training Gradient Boosting Regressor with optimized hyperparameters...")
+    print("Training Gradient Boosting Regressor with optimized hyperparameters...")
     regressor = GradientBoostingRegressor(
         n_estimators=200,  # Increased for better ensemble
         learning_rate=0.08,  # Slightly lower for better convergence
@@ -271,18 +271,18 @@ def train_models():
     qty_rmse = np.sqrt(mean_squared_error(y_qty_test, y_pred_quantity))
     qty_mape = np.mean(np.abs((y_qty_test - y_pred_quantity) / (y_qty_test + 1))) * 100
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • R² Score: {qty_r2*100:.2f}%")
-    print(f"  • MAE:      {qty_mae:.2f} kg")
-    print(f"  • RMSE:     {qty_rmse:.2f} kg")
-    print(f"  • MAPE:     {qty_mape:.2f}%")
+    print(f"\nModel trained successfully")
+    print(f"R² Score: {qty_r2*100:.2f}%")
+    print(f"MAE:      {qty_mae:.2f} kg")
+    print(f"RMSE:     {qty_rmse:.2f} kg")
+    print(f"MAPE:     {qty_mape:.2f}%")
 
     # ============ MODEL 3: QUALITY PREDICTOR ============
     print("\n" + "-"*80)
     print("MODEL 3: RANDOM FOREST REGRESSOR (Quality Prediction)")
     print("-"*80)
 
-    print("🤖 Training Random Forest Regressor with optimized hyperparameters...")
+    print("Training Random Forest Regressor with optimized hyperparameters...")
     quality_predictor = RandomForestRegressor(
         n_estimators=200,  # Increased for better ensemble
         max_depth=20,  # Deeper trees for complex patterns
@@ -301,10 +301,10 @@ def train_models():
     quality_mae = mean_absolute_error(y_qual_test, y_pred_quality)
     quality_rmse = np.sqrt(mean_squared_error(y_qual_test, y_pred_quality))
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • R² Score: {quality_r2*100:.2f}%")
-    print(f"  • MAE:      {quality_mae:.2f} psi")
-    print(f"  • RMSE:     {quality_rmse:.2f} psi")
+    print(f"\nModel trained successfully")
+    print(f"R² Score: {quality_r2*100:.2f}%")
+    print(f"MAE:      {quality_mae:.2f} psi")
+    print(f"RMSE:     {quality_rmse:.2f} psi")
 
     # ============ GENERATE REGRESSION PLOTS ============
     print("\n" + "-"*80)
@@ -315,25 +315,25 @@ def train_models():
     plot_dir = os.path.join(current_dir, 'plots')
     os.makedirs(plot_dir, exist_ok=True)
     
-    print("📊 Creating regression analysis plots...")
+    print("Creating regression analysis plots...")
     
     # Plot 1: Quantity Regressor
     fig_qty = plot_regression_results(y_qty_test, y_pred_quantity, 
-                                      "MODEL 2: Quantity Regressor (Gradient Boosting)",
+                                      "Quantity Regressor - Gradient Boosting",
                                       qty_r2, qty_mae)
     qty_plot_path = os.path.join(plot_dir, '01_quantity_regression_plot.png')
     fig_qty.savefig(qty_plot_path, dpi=300, bbox_inches='tight')
     plt.close(fig_qty)
-    print(f"   ✓ Saved: {qty_plot_path}")
+    print(f"Saved: {qty_plot_path}")
     
     # Plot 2: Quality Predictor
     fig_qual = plot_regression_results(y_qual_test, y_pred_quality,
-                                       "MODEL 3: Quality Predictor (Random Forest)",
+                                       "Quality Predictor - Random Forest",
                                        quality_r2, quality_mae)
     qual_plot_path = os.path.join(plot_dir, '02_quality_regression_plot.png')
     fig_qual.savefig(qual_plot_path, dpi=300, bbox_inches='tight')
     plt.close(fig_qual)
-    print(f"   ✓ Saved: {qual_plot_path}")
+    print(f"Saved: {qual_plot_path}")
     
     # Plot 3: Model Comparison Dashboard
     fig_compare = plt.figure(figsize=(14, 8))
@@ -400,9 +400,9 @@ def train_models():
     compare_plot_path = os.path.join(plot_dir, '00_model_comparison_dashboard.png')
     fig_compare.savefig(compare_plot_path, dpi=300, bbox_inches='tight')
     plt.close(fig_compare)
-    print(f"   ✓ Saved: {compare_plot_path}")
+    print(f"Saved: {compare_plot_path}")
     
-    print(f"\n📁 All plots saved to: {plot_dir}")
+    print(f"\nAll plots saved to: {plot_dir}")
     #
     # ============ MODEL 4: LIGHTGBM REGRESSOR ============
     # print("\n" + "-"*80)
@@ -444,7 +444,7 @@ def train_models():
     model_dir = os.path.join(current_dir, 'latest')
     os.makedirs(model_dir, exist_ok=True)
 
-    print(f"📁 Saving to: {model_dir}")
+    print(f"Saving to: {model_dir}")
 
     # Save models
     joblib.dump(classifier, os.path.join(model_dir, 'material_classifier.pkl'))
@@ -453,11 +453,11 @@ def train_models():
     # joblib.dump(lgbm_predictor, os.path.join(model_dir, 'lightgbm_quality_predictor.pkl'))
     joblib.dump(scaler, os.path.join(model_dir, 'scaler.pkl'))
 
-    print("   ✓ material_classifier.pkl")
-    print("   ✓ quantity_regressor.pkl")
-    print("   ✓ quality_predictor.pkl")
-    # print("   ✓ lightgbm_quality_predictor.pkl")
-    print("   ✓ scaler.pkl")
+    print("OK - material_classifier.pkl")
+    print("OK - quantity_regressor.pkl")
+    print("OK - quality_predictor.pkl")
+    # print("OK - lightgbm_quality_predictor.pkl")
+    print("OK - scaler.pkl")
 
     # Save metadata
     metadata = {
@@ -490,25 +490,25 @@ def train_models():
     print("TRAINING SUMMARY & ACCURACY REPORT")
     print("="*80)
 
-    print("\n📊 OVERALL PERFORMANCE METRICS")
+    print("\nOVERALL PERFORMANCE METRICS")
     print("-"*80)
 
-    print("\n1️⃣  MATERIAL CLASSIFIER (Random Forest)")
-    print(f"    Accuracy:  {classifier_accuracy*100:6.2f}%")
-    print(f"    Precision: {classifier_precision*100:6.2f}%")
-    print(f"    Recall:    {classifier_recall*100:6.2f}%")
-    print(f"    F1-Score:  {classifier_f1*100:6.2f}%")
+    print("\nMATERIAL CLASSIFIER (Random Forest)")
+    print(f"Accuracy:  {classifier_accuracy*100:6.2f}%")
+    print(f"Precision: {classifier_precision*100:6.2f}%")
+    print(f"Recall:    {classifier_recall*100:6.2f}%")
+    print(f"F1-Score:  {classifier_f1*100:6.2f}%")
 
-    print("\n2️⃣  QUANTITY REGRESSOR (Gradient Boosting)")
-    print(f"    R² Score:  {qty_r2*100:6.2f}%")
-    print(f"    MAE:       {qty_mae:6.2f} kg")
-    print(f"    RMSE:      {qty_rmse:6.2f} kg")
-    print(f"    MAPE:      {qty_mape:6.2f}%")
+    print("\nQUANTITY REGRESSOR (Gradient Boosting)")
+    print(f"R² Score:  {qty_r2*100:6.2f}%")
+    print(f"MAE:       {qty_mae:6.2f} kg")
+    print(f"RMSE:      {qty_rmse:6.2f} kg")
+    print(f"MAPE:      {qty_mape:6.2f}%")
 
-    print("\n3️⃣  QUALITY PREDICTOR (Random Forest)")
-    print(f"    R² Score:  {quality_r2*100:6.2f}%")
-    print(f"    MAE:       {quality_mae:6.2f} psi")
-    print(f"    RMSE:      {quality_rmse:6.2f} psi")
+    print("\nQUALITY PREDICTOR (Random Forest)")
+    print(f"R² Score:  {quality_r2*100:6.2f}%")
+    print(f"MAE:       {quality_mae:6.2f} psi")
+    print(f"RMSE:      {quality_rmse:6.2f} psi")
     #
     # print("\n4️⃣  LIGHTGBM QUALITY PREDICTOR (LightGBM Regressor)")
     # print(f"    R² Score:  {lgbm_r2*100:6.2f}%")
@@ -534,24 +534,24 @@ def train_models():
     composite_accuracy = (classifier_acc_pct * 0.4 + regressor_acc_pct * 0.3 + quality_acc_pct * 0.3) / 100
 
     print("\n" + "="*80)
-    print(f"🎯 MODEL PERFORMANCE SUMMARY")
+    print(f"MODEL PERFORMANCE SUMMARY")
     print("="*80)
     print(f"\nModel 1 (Material Classifier):  {classifier_acc_pct:.2f}%")
     print(f"Model 2 (Quantity Regressor):  {regressor_acc_pct:.2f}%")
     print(f"Model 3 (Quality Predictor):   {quality_acc_pct:.2f}%")
-    print(f"\n🎯 WEIGHTED COMPOSITE ACCURACY: {composite_accuracy*100:.2f}%")
+    print(f"\nWEIGHTED COMPOSITE ACCURACY: {composite_accuracy*100:.2f}%")
     print("="*80)
 
     if composite_accuracy > 0.90:
-        print("✅ STATUS: EXCELLENT - Model ready for production deployment")
+        print("STATUS: EXCELLENT - Model ready for production deployment")
     elif composite_accuracy > 0.85:
-        print("✅ STATUS: GOOD - Model suitable for production with monitoring")
+        print("STATUS: GOOD - Model suitable for production with monitoring")
     elif composite_accuracy > 0.80:
-        print("⚠️  STATUS: ACCEPTABLE - Model needs tuning before production")
+        print("STATUS: ACCEPTABLE - Model needs tuning before production")
     else:
-        print("❌ STATUS: NEEDS IMPROVEMENT - Recommend model optimization")
+        print("STATUS: NEEDS IMPROVEMENT - Recommend model optimization")
 
-    print("\n" + "="*80 + "\n")
+    print("\nTraining completed successfully\n")
 
     return True
 
