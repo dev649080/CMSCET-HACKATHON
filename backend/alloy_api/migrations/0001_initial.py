@@ -1,0 +1,78 @@
+# Generated migration for alloy_api models
+
+from django.db import migrations, models
+import django.utils.timezone
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='AlloyComposition',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=100)),
+                ('grade', models.CharField(max_length=50)),
+                ('elements', models.JSONField(default=dict)),
+                ('properties', models.JSONField(default=dict)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                'db_table': 'alloy_compositions',
+            },
+        ),
+        migrations.CreateModel(
+            name='ProcessData',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('furnace_id', models.CharField(max_length=50)),
+                ('temperature', models.FloatField()),
+                ('pressure', models.FloatField()),
+                ('oxygen_level', models.FloatField()),
+                ('composition_data', models.JSONField(default=dict)),
+                ('timestamp', models.DateTimeField(default=django.utils.timezone.now)),
+                ('quality_score', models.FloatField(blank=True, null=True)),
+            ],
+            options={
+                'db_table': 'process_data',
+            },
+        ),
+        migrations.CreateModel(
+            name='Inventory',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('material_name', models.CharField(max_length=100)),
+                ('material_type', models.CharField(max_length=50)),
+                ('quantity', models.FloatField()),
+                ('unit', models.CharField(max_length=20)),
+                ('supplier', models.CharField(max_length=100)),
+                ('quality_grade', models.CharField(max_length=20)),
+                ('last_updated', models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                'db_table': 'inventory',
+            },
+        ),
+        migrations.CreateModel(
+            name='Alert',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=200)),
+                ('message', models.TextField()),
+                ('severity', models.CharField(choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')], max_length=20)),
+                ('source', models.CharField(max_length=100)),
+                ('is_resolved', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('resolved_at', models.DateTimeField(blank=True, null=True)),
+            ],
+            options={
+                'db_table': 'alerts',
+            },
+        ),
+    ]
