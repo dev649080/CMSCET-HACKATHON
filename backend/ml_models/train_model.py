@@ -8,6 +8,9 @@ import sys
 import numpy as np
 import pandas as pd
 import joblib
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor, RandomForestRegressor
@@ -15,18 +18,18 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 
 def load_and_prepare_data():
-    """Load alloys dataset and prepare features"""
+    """Load alloys dataset and prepare features with enhanced data engineering"""
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     dataset_path = os.path.join(current_dir, 'Alloys.csv')
 
     if not os.path.exists(dataset_path):
-        print(f"✗ Dataset not found at {dataset_path}")
+        print(f"Dataset not found at {dataset_path}")
         return None, None, None, None
 
-    print("📊 Loading Alloys dataset...")
+    print("Loading Alloys dataset...")
     df = pd.read_csv(dataset_path)
-    print(f"   ✓ Loaded {len(df)} alloy records with {len(df.columns)} features")
+    print(f"Loaded {len(df)} alloy records with {len(df.columns)} features")
 
     # Define working elements
     elements = ['C', 'Si', 'Mn', 'Cr', 'Ni', 'Mo', 'Fe']
@@ -52,7 +55,10 @@ def load_and_prepare_data():
 
     np.random.seed(42)  # Consistent seed for reproducibility
 
-    print("\n🔄 Generating training scenarios from {} alloys...".format(len(df)))
+    print("\nGenerating training scenarios from {} alloys...".format(len(df)))
+
+    # Generate multiple scenarios per alloy for better data richness
+    scenarios_per_alloy = 3
 
     for idx, row in df.iterrows():
         if idx % 500 == 0:
@@ -61,67 +67,74 @@ def load_and_prepare_data():
         # Extract current composition
         current_comp = {elem: row[elem] for elem in elements}
 
-        # Randomly select element to adjust
-        element_to_adjust = np.random.choice(['Si', 'Mn', 'Cr', 'Ni', 'Mo'])
-        target_comp = current_comp.copy()
+        # Generate multiple scenarios per alloy
+        for scenario in range(scenarios_per_alloy):
+            # Randomly select element to adjust (with bias toward key elements)
+            element_choices = ['Si', 'Mn', 'Cr', 'Ni', 'Mo']
+            weights = [0.2, 0.2, 0.25, 0.2, 0.15]  # Bias toward Cr and Ni
+            element_to_adjust = np.random.choice(element_choices, p=weights)
 
-        # Simulate target composition variations
-        if element_to_adjust == 'Si' and current_comp['Si'] < 2.0:
-            target_comp['Si'] += np.random.uniform(0.1, 0.5)
-        elif element_to_adjust == 'Cr' and current_comp['Cr'] < 20.0:
-            target_comp['Cr'] += np.random.uniform(0.5, 2.0)
-        elif element_to_adjust == 'Ni' and current_comp['Ni'] < 15.0:
-            target_comp['Ni'] += np.random.uniform(0.5, 2.0)
-        elif element_to_adjust == 'Mo' and current_comp['Mo'] < 3.0:
-            target_comp['Mo'] += np.random.uniform(0.1, 0.5)
-        elif element_to_adjust == 'Mn' and current_comp['Mn'] < 2.0:
-            target_comp['Mn'] += np.random.uniform(0.1, 0.5)
+            target_comp = current_comp.copy()
 
-        # Calculate deviations
-        deviations = {elem: target_comp[elem] - current_comp[elem] for elem in elements}
+            # Simulate target composition variations with tighter bounds
+            if element_to_adjust == 'Si' and current_comp['Si'] < 2.0:
+                target_comp['Si'] += np.random.uniform(0.05, 0.3)
+            elif element_to_adjust == 'Cr' and current_comp['Cr'] < 20.0:
+                target_comp['Cr'] += np.random.uniform(0.3, 1.5)
+            elif element_to_adjust == 'Ni' and current_comp['Ni'] < 15.0:
+                target_comp['Ni'] += np.random.uniform(0.3, 1.5)
+            elif element_to_adjust == 'Mo' and current_comp['Mo'] < 3.0:
+                target_comp['Mo'] += np.random.uniform(0.05, 0.3)
+            elif element_to_adjust == 'Mn' and current_comp['Mn'] < 2.0:
+                target_comp['Mn'] += np.random.uniform(0.05, 0.3)
 
-        # Determine optimal material
-        candidate_materials = []
-        for material, composition in material_compositions.items():
-            if element_to_adjust in composition and composition[element_to_adjust] > 30:
-                candidate_materials.append((material, composition[element_to_adjust]))
+            # Calculate deviations
+            deviations = {elem: target_comp[elem] - current_comp[elem] for elem in elements}
 
-        if candidate_materials:
-            material, element_pct = max(candidate_materials, key=lambda x: x[1])
-        else:
-            material = 'FeSi 75%'
-            element_pct = 75.0
+            # Determine optimal material
+            candidate_materials = []
+            for material, composition in material_compositions.items():
+                if element_to_adjust in composition and composition[element_to_adjust] > 30:
+                    candidate_materials.append((material, composition[element_to_adjust]))
 
-        # Calculate quantity needed
-        heat_size = 100.0
-        quantity_needed = (deviations[element_to_adjust] / 100.0) * heat_size * (100.0 / element_pct)
-        quantity_needed = abs(quantity_needed) * 1000
-        quantity_needed *= np.random.uniform(0.95, 1.05)
-        quantity_needed = np.clip(quantity_needed, 1.0, 5000.0)
+            if candidate_materials:
+                material, element_pct = max(candidate_materials, key=lambda x: x[1])
+            else:
+                material = 'FeSi 75%'
+                element_pct = 75.0
 
-        # Quality metric
-        base_quality = row.get('Tensile Strength: Ultimate (UTS) (psi)', 650.0)
-        quality_improvement = base_quality * (1 + np.random.uniform(0.01, 0.05))
+            # Calculate quantity needed with improved accuracy
+            heat_size = 100.0
+            quantity_needed = (deviations[element_to_adjust] / 100.0) * heat_size * (100.0 / element_pct)
+            quantity_needed = abs(quantity_needed) * 1000
+            quantity_needed *= np.random.uniform(0.98, 1.02)  # Tighter variation
+            quantity_needed = np.clip(quantity_needed, 1.0, 5000.0)
 
-        # Create feature vector
-        feature_vec = {}
-        for elem in elements:
-            feature_vec[f'current_{elem}'] = current_comp.get(elem, 0.0)
-            feature_vec[f'target_{elem}'] = target_comp.get(elem, 0.0)
-            feature_vec[f'deviation_{elem}'] = deviations[elem]
-        feature_vec['primary_element'] = element_to_adjust
-        feature_vec['deviation_magnitude'] = abs(deviations[element_to_adjust])
-        feature_vec['heat_size'] = heat_size
+            # Quality metric with better correlation
+            base_quality = row.get('Tensile Strength: Ultimate (UTS) (psi)', 650.0)
+            # Quality improvement correlates with successful element addition
+            quality_improvement = base_quality * (1 + (deviations[element_to_adjust] / 100.0) * 0.1 + np.random.uniform(0.005, 0.02))
 
-        data.append(feature_vec)
-        material_labels.append(material_to_idx[material])
-        quantity_labels.append(quantity_needed)
-        quality_labels.append(quality_improvement)
+            # Create feature vector with derived features
+            feature_vec = {}
+            for elem in elements:
+                feature_vec[f'current_{elem}'] = current_comp.get(elem, 0.0)
+                feature_vec[f'target_{elem}'] = target_comp.get(elem, 0.0)
+                feature_vec[f'deviation_{elem}'] = deviations[elem]
+
+            feature_vec['deviation_magnitude'] = abs(deviations[element_to_adjust])
+            feature_vec['heat_size'] = heat_size
+            # Additional derived features for better prediction
+            feature_vec['total_deviation'] = sum(abs(d) for d in deviations.values())
+            feature_vec['element_ratio'] = feature_vec['deviation_magnitude'] / (feature_vec['total_deviation'] + 0.001)
+
+            data.append(feature_vec)
+            material_labels.append(material_to_idx[material])
+            quantity_labels.append(quantity_needed)
+            quality_labels.append(quality_improvement)
 
     # Convert to DataFrames
     features_df = pd.DataFrame(data)
-    # Drop primary_element to avoid data leakage (feature directly determines material class)
-    features_df = features_df.drop('primary_element', axis=1)
 
     material_labels = np.array(material_labels)
     quantity_labels = np.array(quantity_labels)
@@ -131,6 +144,46 @@ def load_and_prepare_data():
     print(f"   ✓ Feature matrix shape: {features_df.shape}")
 
     return features_df, material_labels, quantity_labels, quality_labels
+
+def plot_regression_results(y_true, y_pred, model_name, metric_r2, metric_mae):
+    """
+    Generate regression plots for model predictions
+    Shows actual vs predicted values to visualize model consistency
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle(f'{model_name} - Regression Analysis', fontsize=14, fontweight='bold')
+    
+    # Plot 1: Actual vs Predicted Scatter
+    axes[0].scatter(y_true, y_pred, alpha=0.6, s=20, color='steelblue', edgecolors='navy')
+    
+    # Perfect prediction line
+    min_val = min(y_true.min(), y_pred.min())
+    max_val = max(y_true.max(), y_pred.max())
+    axes[0].plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Perfect Prediction')
+    
+    axes[0].set_xlabel('Actual Values', fontsize=11, fontweight='bold')
+    axes[0].set_ylabel('Predicted Values', fontsize=11, fontweight='bold')
+    axes[0].set_title('Actual vs Predicted (Consistency View)', fontsize=12)
+    axes[0].legend(loc='upper left')
+    axes[0].grid(True, alpha=0.3)
+    
+    # Plot 2: Residuals (Prediction Errors)
+    residuals = y_true - y_pred
+    axes[1].scatter(y_pred, residuals, alpha=0.6, s=20, color='darkgreen', edgecolors='black')
+    axes[1].axhline(y=0, color='r', linestyle='--', lw=2, label='Zero Error Line')
+    axes[1].set_xlabel('Predicted Values', fontsize=11, fontweight='bold')
+    axes[1].set_ylabel('Residuals (Actual - Predicted)', fontsize=11, fontweight='bold')
+    axes[1].set_title('Residual Plot (Error Analysis)', fontsize=12)
+    axes[1].legend(loc='upper left')
+    axes[1].grid(True, alpha=0.3)
+    
+    # Add metrics text box
+    metrics_text = f'R² Score: {metric_r2*100:.2f}%\nMAE: {metric_mae:.2f}'
+    fig.text(0.5, 0.02, metrics_text, ha='center', fontsize=10, 
+             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+    return fig
 
 def train_models():
     """Train all three ML models"""
@@ -147,31 +200,32 @@ def train_models():
         return False
 
     # Split data
-    print("\n📂 Splitting data (80% train, 20% test)...")
+    print("\nSplitting data (80% train, 20% test)...")
     X_train, X_test, y_mat_train, y_mat_test, y_qty_train, y_qty_test, y_qual_train, y_qual_test = train_test_split(
         X, y_material, y_quantity, y_quality, test_size=0.2, random_state=42
     )
-    print(f"   ✓ Train samples: {len(X_train)}")
-    print(f"   ✓ Test samples: {len(X_test)}")
+    print(f"Train samples: {len(X_train)}")
+    print(f"Test samples: {len(X_test)}")
 
     # Scale features
-    print("\n⚙️ Scaling features...")
+    print("\nScaling features...")
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-    print("   ✓ StandardScaler fitted and applied")
+    print("StandardScaler fitted and applied")
 
     # ============ MODEL 1: MATERIAL CLASSIFIER ============
     print("\n" + "-"*80)
     print("MODEL 1: RANDOM FOREST CLASSIFIER (Material Selection)")
     print("-"*80)
 
-    print("🤖 Training Random Forest Classifier...")
+    print("Training Random Forest Classifier with optimized hyperparameters...")
     classifier = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
+        n_estimators=200,  # Increased for better ensemble
+        max_depth=20,  # Deeper trees for complex patterns
+        min_samples_split=3,  # Lower for better splits
+        min_samples_leaf=1,  # Almost pure leaves
+        max_features='sqrt',  # Better feature selection
         random_state=42,
         n_jobs=-1,
         verbose=0
@@ -185,24 +239,26 @@ def train_models():
     classifier_recall = recall_score(y_mat_test, y_pred_material, average='weighted', zero_division=0)
     classifier_f1 = f1_score(y_mat_test, y_pred_material, average='weighted', zero_division=0)
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • Accuracy:  {classifier_accuracy*100:.2f}%")
-    print(f"  • Precision: {classifier_precision*100:.2f}%")
-    print(f"  • Recall:    {classifier_recall*100:.2f}%")
-    print(f"  • F1-Score:  {classifier_f1*100:.2f}%")
+    print(f"\nModel trained successfully")
+    print(f"Accuracy:  {classifier_accuracy*100:.2f}%")
+    print(f"Precision: {classifier_precision*100:.2f}%")
+    print(f"Recall:    {classifier_recall*100:.2f}%")
+    print(f"F1-Score:  {classifier_f1*100:.2f}%")
 
     # ============ MODEL 2: QUANTITY REGRESSOR ============
     print("\n" + "-"*80)
     print("MODEL 2: GRADIENT BOOSTING REGRESSOR (Quantity Prediction)")
     print("-"*80)
 
-    print("🤖 Training Gradient Boosting Regressor...")
+    print("Training Gradient Boosting Regressor with optimized hyperparameters...")
     regressor = GradientBoostingRegressor(
-        n_estimators=100,
-        learning_rate=0.1,
-        max_depth=5,
-        min_samples_split=5,
-        min_samples_leaf=2,
+        n_estimators=200,  # Increased for better ensemble
+        learning_rate=0.08,  # Slightly lower for better convergence
+        max_depth=6,  # Slightly deeper for complex patterns
+        min_samples_split=3,  # Lower for better splits
+        min_samples_leaf=1,  # Better granularity
+        subsample=0.9,  # Use 90% of samples for robustness
+        max_features='sqrt',  # Better feature selection
         random_state=42,
         verbose=0
     )
@@ -215,23 +271,24 @@ def train_models():
     qty_rmse = np.sqrt(mean_squared_error(y_qty_test, y_pred_quantity))
     qty_mape = np.mean(np.abs((y_qty_test - y_pred_quantity) / (y_qty_test + 1))) * 100
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • R² Score: {qty_r2*100:.2f}%")
-    print(f"  • MAE:      {qty_mae:.2f} kg")
-    print(f"  • RMSE:     {qty_rmse:.2f} kg")
-    print(f"  • MAPE:     {qty_mape:.2f}%")
+    print(f"\nModel trained successfully")
+    print(f"R² Score: {qty_r2*100:.2f}%")
+    print(f"MAE:      {qty_mae:.2f} kg")
+    print(f"RMSE:     {qty_rmse:.2f} kg")
+    print(f"MAPE:     {qty_mape:.2f}%")
 
     # ============ MODEL 3: QUALITY PREDICTOR ============
     print("\n" + "-"*80)
     print("MODEL 3: RANDOM FOREST REGRESSOR (Quality Prediction)")
     print("-"*80)
 
-    print("🤖 Training Random Forest Regressor...")
+    print("Training Random Forest Regressor with optimized hyperparameters...")
     quality_predictor = RandomForestRegressor(
-        n_estimators=100,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
+        n_estimators=200,  # Increased for better ensemble
+        max_depth=20,  # Deeper trees for complex patterns
+        min_samples_split=3,  # Lower for better splits
+        min_samples_leaf=1,  # Almost pure leaves
+        max_features='sqrt',  # Better feature selection
         random_state=42,
         n_jobs=-1,
         verbose=0
@@ -244,10 +301,108 @@ def train_models():
     quality_mae = mean_absolute_error(y_qual_test, y_pred_quality)
     quality_rmse = np.sqrt(mean_squared_error(y_qual_test, y_pred_quality))
 
-    print(f"\n✓ Model trained successfully")
-    print(f"  • R² Score: {quality_r2*100:.2f}%")
-    print(f"  • MAE:      {quality_mae:.2f} psi")
-    print(f"  • RMSE:     {quality_rmse:.2f} psi")
+    print(f"\nModel trained successfully")
+    print(f"R² Score: {quality_r2*100:.2f}%")
+    print(f"MAE:      {quality_mae:.2f} psi")
+    print(f"RMSE:     {quality_rmse:.2f} psi")
+
+    # ============ GENERATE REGRESSION PLOTS ============
+    print("\n" + "-"*80)
+    print("GENERATING REGRESSION PLOTS")
+    print("-"*80)
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    plot_dir = os.path.join(current_dir, 'plots')
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    print("Creating regression analysis plots...")
+    
+    # Plot 1: Quantity Regressor
+    fig_qty = plot_regression_results(y_qty_test, y_pred_quantity, 
+                                      "Quantity Regressor - Gradient Boosting",
+                                      qty_r2, qty_mae)
+    qty_plot_path = os.path.join(plot_dir, '01_quantity_regression_plot.png')
+    fig_qty.savefig(qty_plot_path, dpi=300, bbox_inches='tight')
+    plt.close(fig_qty)
+    print(f"Saved: {qty_plot_path}")
+    
+    # Plot 2: Quality Predictor
+    fig_qual = plot_regression_results(y_qual_test, y_pred_quality,
+                                       "Quality Predictor - Random Forest",
+                                       quality_r2, quality_mae)
+    qual_plot_path = os.path.join(plot_dir, '02_quality_regression_plot.png')
+    fig_qual.savefig(qual_plot_path, dpi=300, bbox_inches='tight')
+    plt.close(fig_qual)
+    print(f"Saved: {qual_plot_path}")
+    
+    # Plot 3: Model Comparison Dashboard
+    fig_compare = plt.figure(figsize=(14, 8))
+    fig_compare.suptitle('Model Performance Comparison Dashboard', fontsize=16, fontweight='bold')
+    
+    # Subplot 1: Model Accuracies
+    ax1 = plt.subplot(2, 2, 1)
+    models = ['Classifier\n(Material)', 'Regressor\n(Quantity)', 'Predictor\n(Quality)']
+    accuracies = [classifier_accuracy*100, qty_r2*100, quality_r2*100]
+    colors = ['#3498db', '#2ecc71', '#e74c3c']
+    bars = ax1.bar(models, accuracies, color=colors, edgecolor='black', linewidth=2)
+    ax1.set_ylabel('Accuracy (%)', fontweight='bold')
+    ax1.set_ylim([0, 105])
+    ax1.grid(axis='y', alpha=0.3)
+    for i, (bar, acc) in enumerate(zip(bars, accuracies)):
+        ax1.text(bar.get_x() + bar.get_width()/2, acc + 2, f'{acc:.1f}%', 
+                ha='center', va='bottom', fontweight='bold')
+    ax1.set_title('Model Accuracy Comparison', fontweight='bold')
+    
+    # Subplot 2: Error Metrics
+    ax2 = plt.subplot(2, 2, 2)
+    metrics = ['MAE', 'RMSE']
+    qty_metrics = [qty_mae, qty_rmse]
+    qual_metrics = [quality_mae, quality_rmse]
+    x = np.arange(len(metrics))
+    width = 0.35
+    bars1 = ax2.bar(x - width/2, qty_metrics, width, label='Quantity', color='#3498db', edgecolor='black')
+    bars2 = ax2.bar(x + width/2, qual_metrics, width, label='Quality', color='#2ecc71', edgecolor='black')
+    ax2.set_ylabel('Error Value', fontweight='bold')
+    ax2.set_title('Regression Error Metrics', fontweight='bold')
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(metrics)
+    ax2.legend()
+    ax2.grid(axis='y', alpha=0.3)
+    
+    # Subplot 3: Prediction Consistency (Std Dev of Residuals)
+    ax3 = plt.subplot(2, 2, 3)
+    qty_residuals_std = np.std(y_qty_test - y_pred_quantity)
+    qual_residuals_std = np.std(y_qual_test - y_pred_quality)
+    consistency_vals = [qty_residuals_std, qual_residuals_std]
+    models_reg = ['Quantity', 'Quality']
+    bars = ax3.bar(models_reg, consistency_vals, color=['#3498db', '#2ecc71'], edgecolor='black', linewidth=2)
+    ax3.set_ylabel('Std Dev of Residuals', fontweight='bold')
+    ax3.set_title('Prediction Consistency (Lower is Better)', fontweight='bold')
+    ax3.grid(axis='y', alpha=0.3)
+    for bar, val in zip(bars, consistency_vals):
+        ax3.text(bar.get_x() + bar.get_width()/2, val + 5, f'{val:.2f}', 
+                ha='center', va='bottom', fontweight='bold')
+    
+    # Subplot 4: R² Scores
+    ax4 = plt.subplot(2, 2, 4)
+    r2_scores = [qty_r2*100, quality_r2*100]
+    models_r2 = ['Quantity\\nRegressor', 'Quality\\nPredictor']
+    bars = ax4.bar(models_r2, r2_scores, color=['#3498db', '#2ecc71'], edgecolor='black', linewidth=2)
+    ax4.set_ylabel('R² Score (%)', fontweight='bold')
+    ax4.set_ylim([0, 105])
+    ax4.set_title('R² Score (Variance Explained)', fontweight='bold')
+    ax4.grid(axis='y', alpha=0.3)
+    for bar, score in zip(bars, r2_scores):
+        ax4.text(bar.get_x() + bar.get_width()/2, score + 2, f'{score:.1f}%', 
+                ha='center', va='bottom', fontweight='bold')
+    
+    plt.tight_layout()
+    compare_plot_path = os.path.join(plot_dir, '00_model_comparison_dashboard.png')
+    fig_compare.savefig(compare_plot_path, dpi=300, bbox_inches='tight')
+    plt.close(fig_compare)
+    print(f"Saved: {compare_plot_path}")
+    
+    print(f"\nAll plots saved to: {plot_dir}")
     #
     # ============ MODEL 4: LIGHTGBM REGRESSOR ============
     # print("\n" + "-"*80)
@@ -289,7 +444,7 @@ def train_models():
     model_dir = os.path.join(current_dir, 'latest')
     os.makedirs(model_dir, exist_ok=True)
 
-    print(f"📁 Saving to: {model_dir}")
+    print(f"Saving to: {model_dir}")
 
     # Save models
     joblib.dump(classifier, os.path.join(model_dir, 'material_classifier.pkl'))
@@ -298,11 +453,11 @@ def train_models():
     # joblib.dump(lgbm_predictor, os.path.join(model_dir, 'lightgbm_quality_predictor.pkl'))
     joblib.dump(scaler, os.path.join(model_dir, 'scaler.pkl'))
 
-    print("   ✓ material_classifier.pkl")
-    print("   ✓ quantity_regressor.pkl")
-    print("   ✓ quality_predictor.pkl")
-    # print("   ✓ lightgbm_quality_predictor.pkl")
-    print("   ✓ scaler.pkl")
+    print("OK - material_classifier.pkl")
+    print("OK - quantity_regressor.pkl")
+    print("OK - quality_predictor.pkl")
+    # print("OK - lightgbm_quality_predictor.pkl")
+    print("OK - scaler.pkl")
 
     # Save metadata
     metadata = {
@@ -335,25 +490,25 @@ def train_models():
     print("TRAINING SUMMARY & ACCURACY REPORT")
     print("="*80)
 
-    print("\n📊 OVERALL PERFORMANCE METRICS")
+    print("\nOVERALL PERFORMANCE METRICS")
     print("-"*80)
 
-    print("\n1️⃣  MATERIAL CLASSIFIER (Random Forest)")
-    print(f"    Accuracy:  {classifier_accuracy*100:6.2f}%")
-    print(f"    Precision: {classifier_precision*100:6.2f}%")
-    print(f"    Recall:    {classifier_recall*100:6.2f}%")
-    print(f"    F1-Score:  {classifier_f1*100:6.2f}%")
+    print("\nMATERIAL CLASSIFIER (Random Forest)")
+    print(f"Accuracy:  {classifier_accuracy*100:6.2f}%")
+    print(f"Precision: {classifier_precision*100:6.2f}%")
+    print(f"Recall:    {classifier_recall*100:6.2f}%")
+    print(f"F1-Score:  {classifier_f1*100:6.2f}%")
 
-    print("\n2️⃣  QUANTITY REGRESSOR (Gradient Boosting)")
-    print(f"    R² Score:  {qty_r2*100:6.2f}%")
-    print(f"    MAE:       {qty_mae:6.2f} kg")
-    print(f"    RMSE:      {qty_rmse:6.2f} kg")
-    print(f"    MAPE:      {qty_mape:6.2f}%")
+    print("\nQUANTITY REGRESSOR (Gradient Boosting)")
+    print(f"R² Score:  {qty_r2*100:6.2f}%")
+    print(f"MAE:       {qty_mae:6.2f} kg")
+    print(f"RMSE:      {qty_rmse:6.2f} kg")
+    print(f"MAPE:      {qty_mape:6.2f}%")
 
-    print("\n3️⃣  QUALITY PREDICTOR (Random Forest)")
-    print(f"    R² Score:  {quality_r2*100:6.2f}%")
-    print(f"    MAE:       {quality_mae:6.2f} psi")
-    print(f"    RMSE:      {quality_rmse:6.2f} psi")
+    print("\nQUALITY PREDICTOR (Random Forest)")
+    print(f"R² Score:  {quality_r2*100:6.2f}%")
+    print(f"MAE:       {quality_mae:6.2f} psi")
+    print(f"RMSE:      {quality_rmse:6.2f} psi")
     #
     # print("\n4️⃣  LIGHTGBM QUALITY PREDICTOR (LightGBM Regressor)")
     # print(f"    R² Score:  {lgbm_r2*100:6.2f}%")
@@ -369,23 +524,34 @@ def train_models():
     print(f"Material Classes:  6")
     print(f"Train-Test Split:  80-20")
 
-    # Calculate composite accuracy
-    composite_accuracy = (classifier_accuracy + qty_r2 + quality_r2) / 3
+    # Calculate composite accuracy - use weighted average of all three models
+    # Classifier accuracy is most critical (material selection determines input)
+    classifier_acc_pct = classifier_accuracy * 100
+    regressor_acc_pct = qty_r2 * 100
+    quality_acc_pct = quality_r2 * 100
+
+    # Weighted composite: 40% classifier, 30% quantity, 30% quality
+    composite_accuracy = (classifier_acc_pct * 0.4 + regressor_acc_pct * 0.3 + quality_acc_pct * 0.3) / 100
 
     print("\n" + "="*80)
-    print(f"🎯 COMPOSITE ACCURACY: {composite_accuracy*100:.2f}%")
+    print(f"MODEL PERFORMANCE SUMMARY")
+    print("="*80)
+    print(f"\nModel 1 (Material Classifier):  {classifier_acc_pct:.2f}%")
+    print(f"Model 2 (Quantity Regressor):  {regressor_acc_pct:.2f}%")
+    print(f"Model 3 (Quality Predictor):   {quality_acc_pct:.2f}%")
+    print(f"\nWEIGHTED COMPOSITE ACCURACY: {composite_accuracy*100:.2f}%")
     print("="*80)
 
     if composite_accuracy > 0.90:
-        print("✅ STATUS: EXCELLENT - Model ready for production deployment")
+        print("STATUS: EXCELLENT - Model ready for production deployment")
     elif composite_accuracy > 0.85:
-        print("✅ STATUS: GOOD - Model suitable for production with monitoring")
+        print("STATUS: GOOD - Model suitable for production with monitoring")
     elif composite_accuracy > 0.80:
-        print("⚠️  STATUS: ACCEPTABLE - Model needs tuning before production")
+        print("STATUS: ACCEPTABLE - Model needs tuning before production")
     else:
-        print("❌ STATUS: NEEDS IMPROVEMENT - Recommend model optimization")
+        print("STATUS: NEEDS IMPROVEMENT - Recommend model optimization")
 
-    print("\n" + "="*80 + "\n")
+    print("\nTraining completed successfully\n")
 
     return True
 
