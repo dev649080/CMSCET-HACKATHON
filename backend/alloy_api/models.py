@@ -1,5 +1,5 @@
 
-from djongo import models
+from django.db import models
 from django.utils import timezone
 
 class AlloyComposition(models.Model):
@@ -53,7 +53,7 @@ class Alert(models.Model):
         ('high', 'High'),
         ('critical', 'Critical'),
     ]
-    
+
     title = models.CharField(max_length=200)
     message = models.TextField()
     severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)

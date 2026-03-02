@@ -57,17 +57,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'alloy_backend.wsgi.application'
 
-# MongoDB Configuration
-DATABASES = {
-    'default': {
-        'ENGINE': 'djongo',
-        'NAME': os.getenv('MONGO_DB_NAME', 'alloy_alchemy_production'),
-        'CLIENT': {
-            'host': os.getenv('MONGO_URI', 'mongodb://localhost:27017'),
-            'authSource': 'admin',
+# Database Configuration
+# Use SQLite for development, MongoDB for production
+if os.getenv('USE_MONGODB', 'false').lower() == 'true':
+    # MongoDB Configuration (production)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'djongo',
+            'NAME': os.getenv('MONGO_DB_NAME', 'alloy_alchemy_production'),
+            'CLIENT': {
+                'host': os.getenv('MONGO_URI', 'mongodb://localhost:27017'),
+                'authSource': 'admin',
+            }
         }
     }
-}
+else:
+    # SQLite Configuration (development)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
