@@ -120,7 +120,8 @@ def load_and_prepare_data():
 
     # Convert to DataFrames
     features_df = pd.DataFrame(data)
-    features_df = pd.get_dummies(features_df, columns=['primary_element'])
+    # Drop primary_element to avoid data leakage (feature directly determines material class)
+    features_df = features_df.drop('primary_element', axis=1)
 
     material_labels = np.array(material_labels)
     quantity_labels = np.array(quantity_labels)
@@ -247,6 +248,37 @@ def train_models():
     print(f"  • R² Score: {quality_r2*100:.2f}%")
     print(f"  • MAE:      {quality_mae:.2f} psi")
     print(f"  • RMSE:     {quality_rmse:.2f} psi")
+    #
+    # ============ MODEL 4: LIGHTGBM REGRESSOR ============
+    # print("\n" + "-"*80)
+    # print("MODEL 4: LIGHTGBM REGRESSOR (Advanced Quality Prediction)")
+    # print("-"*80)
+    #
+    # print("🤖 Training LightGBM Regressor...")
+    # lgbm_predictor = LGBMRegressor(
+    #     n_estimators=100,
+    #     learning_rate=0.1,
+    #     max_depth=6,
+    #     num_leaves=31,
+    #     min_child_samples=20,
+    #     subsample=0.8,
+    #     colsample_bytree=0.8,
+    #     random_state=42,
+    #     verbose=-1,
+    #     n_jobs=-1
+    # )
+    # lgbm_predictor.fit(X_train_scaled, y_qual_train)
+    #
+    # # Predictions and metrics
+    # y_pred_lgbm = lgbm_predictor.predict(X_test_scaled)
+    # lgbm_r2 = r2_score(y_qual_test, y_pred_lgbm)
+    # lgbm_mae = mean_absolute_error(y_qual_test, y_pred_lgbm)
+    # lgbm_rmse = np.sqrt(mean_squared_error(y_qual_test, y_pred_lgbm))
+    #
+    # print(f"\n✓ Model trained successfully")
+    # print(f"  • R² Score: {lgbm_r2*100:.2f}%")
+    # print(f"  • MAE:      {lgbm_mae:.2f} psi")
+    # print(f"  • RMSE:     {lgbm_rmse:.2f} psi")
 
     # ============ SAVE MODELS ============
     print("\n" + "-"*80)
@@ -263,11 +295,13 @@ def train_models():
     joblib.dump(classifier, os.path.join(model_dir, 'material_classifier.pkl'))
     joblib.dump(regressor, os.path.join(model_dir, 'quantity_regressor.pkl'))
     joblib.dump(quality_predictor, os.path.join(model_dir, 'quality_predictor.pkl'))
+    # joblib.dump(lgbm_predictor, os.path.join(model_dir, 'lightgbm_quality_predictor.pkl'))
     joblib.dump(scaler, os.path.join(model_dir, 'scaler.pkl'))
 
     print("   ✓ material_classifier.pkl")
     print("   ✓ quantity_regressor.pkl")
     print("   ✓ quality_predictor.pkl")
+    # print("   ✓ lightgbm_quality_predictor.pkl")
     print("   ✓ scaler.pkl")
 
     # Save metadata
@@ -283,6 +317,9 @@ def train_models():
         'quality_predictor_r2': quality_r2,
         'quality_predictor_mae': quality_mae,
         'quality_predictor_rmse': quality_rmse,
+        # 'lightgbm_r2': lgbm_r2,
+        # 'lightgbm_mae': lgbm_mae,
+        # 'lightgbm_rmse': lgbm_rmse,
         'training_samples': len(X_train),
         'test_samples': len(X_test),
         'features': X.shape[1],
@@ -317,6 +354,11 @@ def train_models():
     print(f"    R² Score:  {quality_r2*100:6.2f}%")
     print(f"    MAE:       {quality_mae:6.2f} psi")
     print(f"    RMSE:      {quality_rmse:6.2f} psi")
+    #
+    # print("\n4️⃣  LIGHTGBM QUALITY PREDICTOR (LightGBM Regressor)")
+    # print(f"    R² Score:  {lgbm_r2*100:6.2f}%")
+    # print(f"    MAE:       {lgbm_mae:6.2f} psi")
+    # print(f"    RMSE:      {lgbm_rmse:6.2f} psi")
 
     print("\n" + "-"*80)
     print("DATASET STATISTICS")
